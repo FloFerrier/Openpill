@@ -18,6 +18,8 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <dbg/panic_debug.h>
+#include <dbg/console_debug.h>
 #include "main.h"
 #include "cmsis_os.h"
 
@@ -48,7 +50,7 @@ DMA_HandleTypeDef hdma_i2c1_tx;
 RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart4;
-UART_HandleTypeDef huart2;
+
 DMA_HandleTypeDef hdma_uart4_rx;
 DMA_HandleTypeDef hdma_uart4_tx;
 
@@ -59,18 +61,19 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 128 * 4
 };
-/* Definitions for myTask02 */
-osThreadId_t myTask02Handle;
-const osThreadAttr_t myTask02_attributes = {
-  .name = "myTask02",
-  .priority = (osPriority_t) osPriorityNormal,
+/* Task Console Debug */
+extern osMessageQueueId_t queueConsoleDebugHandle;
+const osMessageQueueAttr_t queueConsoleDebugAttr = {
+  .name = "Queue_debug"
+};
+extern osThreadId_t taskConsoleDebugHandle;
+const osThreadAttr_t taskConsoleDebugAttr = {
+  .name = "Console_debug",
+  .priority = (osPriority_t) osPriorityLow,
   .stack_size = 128 * 4
 };
-/* Definitions for myQueue01 */
-osMessageQueueId_t myQueue01Handle;
-const osMessageQueueAttr_t myQueue01_attributes = {
-  .name = "myQueue01"
-};
+extern void TaskConsoleDebug(void *argument);
+
 /* Definitions for myTimer01 */
 osTimerId_t myTimer01Handle;
 const osTimerAttr_t myTimer01_attributes = {
@@ -89,7 +92,6 @@ static void MX_RTC_Init(void);
 static void MX_UART4_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
 void Callback01(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -159,7 +161,11 @@ int main(void)
 
   /* Create the queue(s) */
   /* creation of myQueue01 */
-  myQueue01Handle = osMessageQueueNew (16, sizeof(uint16_t), &myQueue01_attributes);
+  queueConsoleDebugHandle = osMessageQueueNew(CONSOLE_DEBUG_MSG_NB_MAX, CONSOLE_DEBUG_MSG_LEN_MAX * sizeof(char), &queueConsoleDebugAttr);
+  if(queueConsoleDebugHandle == NULL)
+  {
+	  panic_alert_msg("[KERNEL] Error to create queue\r\n");
+  }
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -169,8 +175,12 @@ int main(void)
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+  /* creation of Console Debug Task */
+  taskConsoleDebugHandle = osThreadNew(TaskConsoleDebug, NULL, &taskConsoleDebugAttr);
+  if(taskConsoleDebugHandle == NULL)
+  {
+    panic_alert_msg("[KERNEL] Error to create task\r\n");
+  }
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -469,27 +479,10 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    console_debug("Hello world\r\n");
+    osDelay(1000);
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the myTask02 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
-{
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartTask02 */
 }
 
 /* Callback01 function */
