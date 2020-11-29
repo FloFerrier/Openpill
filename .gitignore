@@ -1,5 +1,9 @@
 *.cfg
 *.launch
 *.ld
-.settings/*
+*.ioc
+.mxproject
+.project
+.cproject
+.settings/
 Debug/
